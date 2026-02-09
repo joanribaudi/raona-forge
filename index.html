@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raona Forge</title>
+<meta name="description" content="Has construït un MVP amb IA? Descobreix què necessita el teu producte.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fg: #1d1d1f;
+    --fg-secondary: #6e6e73;
+    --fg-tertiary: #aeaeb2;
+    --accent: #e8601c;
+    --accent-soft: rgba(232, 96, 28, 0.08);
+    --accent-glow: rgba(232, 96, 28, 0.15);
+    --glass: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-shadow: rgba(0, 0, 0, 0.04);
+    --green: #34c759;
+    --green-soft: rgba(52, 199, 89, 0.1);
+    --red: #ff3b30;
+    --red-soft: rgba(255, 59, 48, 0.08);
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --radius: 20px;
+    --radius-sm: 12px;
+    --radius-xs: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  .screen { display: none; min-height: 100vh; min-height: 100dvh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ── Ambient background ── */
+  .ambient {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(232, 96, 28, 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 90%, rgba(26, 58, 92, 0.03) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  /* ══════════════════════════════════════
+     HERO
+  ══════════════════════════════════════ */
+  .hero {
+    justify-content: center;
+    align-items: center;
+    padding: 0 24px;
+  }
+  .hero-inner {
+    max-width: 680px;
+    text-align: center;
+    padding: 120px 0 80px;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-secondary);
+    letter-spacing: 0.02em;
+    margin-bottom: 40px;
+  }
+  .hero-badge .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 56px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin-bottom: 24px;
+    color: var(--fg);
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .hero-sub {
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--fg-secondary);
+    max-width: 480px;
+    margin: 0 auto 48px;
+  }
+  .btn-start {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 36px;
+    background: var(--fg);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: -0.01em;
+  }
+  .btn-start:hover {
+    background: var(--accent);
+    transform: scale(1.02);
+  }
+  .btn-start .arrow {
+    transition: transform 0.3s;
+    font-size: 18px;
+  }
+  .btn-start:hover .arrow { transform: translateX(3px); }
+  .hero-hint {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--fg-tertiary);
+    letter-spacing: 0.01em;
+  }
+
+  /* ══════════════════════════════════════
+     SURVEY
+  ══════════════════════════════════════ */
+  .survey {
+    justify-content: center;
+    align-items: center;
+    padding: 0 24px;
+  }
+  .survey-inner {
+    max-width: 560px;
+    width: 100%;
+    padding: 80px 0;
+  }
+  .survey-progress {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 56px;
+  }
+  .survey-progress .pip {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.06);
+    transition: background 0.4s;
+  }
+  .survey-progress .pip.done { background: var(--fg); }
+  .survey-progress .pip.current { background: var(--accent); }
+
+  .survey-q {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .survey-sub {
+    font-size: 14px;
+    color: var(--fg-tertiary);
+    line-height: 1.5;
+    margin-bottom: 36px;
+  }
+  .survey-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .survey-opt {
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1.5px solid rgba(0,0,0,0.06);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--fg);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .survey-opt:hover {
+    border-color: rgba(0,0,0,0.12);
+    background: #f8f8fa;
+  }
+  .survey-opt.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  /* ══════════════════════════════════════
+     RESULTS
+  ══════════════════════════════════════ */
+  .results {
+    align-items: center;
+    padding: 0 24px;
+  }
+  .results-inner {
+    max-width: 640px;
+    width: 100%;
+    padding: 80px 0 120px;
+  }
+
+  /* Level card */
+  .level-card {
+    background: var(--glass);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 48px;
+    box-shadow: 0 8px 32px var(--glass-shadow), 0 1px 4px var(--glass-shadow);
+  }
+  .level-indicator {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .level-n {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .level-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--fg-secondary);
+  }
+  .level-headline {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .level-desc {
+    font-size: 15px;
+    color: var(--fg-secondary);
+    line-height: 1.6;
+  }
+
+  /* Maturity track */
+  .maturity-track {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 48px;
+  }
+  .mat-seg {
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  .mat-seg .mat-n { font-size: 15px; font-weight: 700; }
+  .mat-seg .mat-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+  .mat-seg.here { flex: 3; }
+  .mat-seg.past { flex: 1; opacity: 0.5; }
+  .mat-seg.future { flex: 1; opacity: 0.3; }
+  .mat-pointer {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* Checklist */
+  .checklist {
+    margin-bottom: 48px;
+  }
+  .check-header {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 16px;
+  }
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .check-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .check-dot.ok { background: var(--green-soft); color: var(--green); }
+  .check-dot.no { background: var(--red-soft); color: var(--red); }
+  .check-label { font-size: 14px; line-height: 1.4; }
+  .check-label.missing { color: var(--red); }
+
+  /* Risk */
+  .risk-block {
+    background: var(--red-soft);
+    border-radius: var(--radius-sm);
+    padding: 24px;
+    margin-bottom: 48px;
+  }
+  .risk-block h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--red);
+    margin-bottom: 8px;
+  }
+  .risk-block p {
+    font-size: 14px;
+    color: var(--fg-secondary);
+    line-height: 1.6;
+  }
+
+  /* Action items */
+  .action-section { margin-bottom: 48px; }
+  .action-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .action-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+  }
+  .action-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+  .action-text {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--fg);
+  }
+
+  /* Later (collapsible) */
+  .later-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-top: 1px solid rgba(0,0,0,0.04);
+    cursor: pointer;
+    margin-bottom: 40px;
+  }
+  .later-toggle span {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fg-tertiary);
+  }
+  .later-toggle .chevron {
+    font-size: 16px;
+    color: var(--fg-tertiary);
+    transition: transform 0.3s;
+  }
+  .later-toggle .chevron.open { transform: rotate(180deg); }
+  .later-list { display: none; padding-bottom: 32px; }
+  .later-list.open { display: block; }
+  .later-item {
+    font-size: 13px;
+    color: var(--fg-tertiary);
+    padding: 6px 0 6px 18px;
+    position: relative;
+  }
+  .later-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 12px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    border: 1.5px solid var(--fg-tertiary);
+  }
+
+  /* Primary CTA */
+  .cta-primary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 28px;
+    background: var(--fg);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 16px;
+    text-decoration: none;
+  }
+  .cta-primary:hover { background: var(--accent); transform: scale(1.01); }
+  .cta-primary h3 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+  .cta-primary p { font-size: 13px; color: rgba(255,255,255,0.6); }
+  .cta-primary .cta-arrow { font-size: 22px; color: #fff; }
+
+  /* Glass cards */
+  .glass-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 48px;
+  }
+  .glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  .glass-card:hover {
+    border-color: rgba(0,0,0,0.08);
+    box-shadow: 0 8px 32px var(--glass-shadow);
+    transform: translateY(-2px);
+  }
+  .glass-card-tag {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .glass-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+  .glass-card-desc {
+    font-size: 12px;
+    color: var(--fg-tertiary);
+    line-height: 1.5;
+  }
+  .glass-card-link {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  /* Repo CTA */
+  .repo-block {
+    background: var(--accent-soft);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 48px;
+  }
+  .repo-block h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .repo-block p {
+    font-size: 14px;
+    color: var(--fg-secondary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    background: var(--fg);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-ghost:hover { background: var(--accent); }
+
+  /* Footer */
+  .r-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 32px;
+    border-top: 1px solid rgba(0,0,0,0.04);
+  }
+  .r-footer-brand {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg-secondary);
+  }
+  .r-footer-brand em { font-style: normal; color: var(--accent); }
+  .r-footer-sub { font-size: 11px; color: var(--fg-tertiary); margin-top: 2px; }
+  .btn-again {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--fg-tertiary);
+    background: none;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 100px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-again:hover { border-color: rgba(0,0,0,0.15); }
+
+  /* ── Animations ── */
+  .fade-up {
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .fade-up-d1 { animation-delay: 0.06s; }
+  .fade-up-d2 { animation-delay: 0.12s; }
+  .fade-up-d3 { animation-delay: 0.18s; }
+  .fade-up-d4 { animation-delay: 0.24s; }
+  .fade-up-d5 { animation-delay: 0.30s; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .hero h1 { font-size: 32px; }
+    .glass-cards { grid-template-columns: 1fr; }
+    .r-footer { flex-direction: column; gap: 12px; align-items: flex-start; }
+    .level-n { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<!-- ═══════ HERO ═══════ -->
+<div id="hero" class="screen active">
+  <div class="hero-inner fade-up">
+    <div class="hero-badge"><span class="dot"></span>Raona Forge</div>
+    <h1>Has construït un MVP.<br><em>I ara què?</em></h1>
+    <p class="hero-sub">Descobreix en 2 minuts què necessita el teu producte per passar de prova de concepte a software real.</p>
+    <button class="btn-start" onclick="startSurvey()">
+      Comença <span class="arrow">→</span>
+    </button>
+    <p class="hero-hint">8 preguntes · Sense registre · Gratuït</p>
+  </div>
+</div>
+
+<!-- ═══════ SURVEY ═══════ -->
+<div id="survey" class="screen">
+  <div class="survey-inner">
+    <div class="survey-progress" id="pips"></div>
+    <h2 class="survey-q" id="qTitle"></h2>
+    <p class="survey-sub" id="qSub"></p>
+    <div class="survey-options" id="qOpts"></div>
+  </div>
+</div>
+
+<!-- ═══════ RESULTS ═══════ -->
+<div id="results" class="screen">
+  <div class="results-inner" id="resContent"></div>
+</div>
+
+<script>
+const QS=[
+  {id:"users",q:"Quants usuaris reals t\u00e9 el teu MVP?",sub:"No compten el teu equip ni stakeholders.",opts:[{l:"Menys de 5",v:0},{l:"5\u201320",v:1},{l:"20\u2013200",v:2},{l:"200\u20132.000",v:3},{l:"M\u00e9s de 2.000",v:4}]},
+  {id:"auth",q:"T\u00e9 login d\u2019usuaris?",sub:"Que calgui registrar-se per accedir.",opts:[{l:"No",v:0},{l:"Login b\u00e0sic",v:1},{l:"Amb rols i permisos",v:2}]},
+  {id:"data",q:"On viuen les teves dades?",sub:"Si no ho saps, probablement Supabase o Firebase.",opts:[{l:"No ho s\u00e9",v:0},{l:"Supabase / Firebase",v:1},{l:"BD que jo controlo",v:2}]},
+  {id:"repo",q:"Tens el codi en un repositori?",opts:[{l:"No / No ho s\u00e9",v:0},{l:"S\u00ed, sense tocar-lo",v:1},{l:"S\u00ed, hi treballo",v:2}]},
+  {id:"tests",q:"Has provat qu\u00e8 passa quan les coses fallen?",sub:"No val \u201Cjo l\u2019he usat i funciona.\u201D",opts:[{l:"Nom\u00e9s el cam\u00ed feli\u00e7",v:0},{l:"Alguns casos especials",v:1},{l:"Tests autom\u00e0tics",v:2}]},
+  {id:"infra",q:"Si l\u2019eina que uses tanqu\u00e9s dem\u00e0?",opts:[{l:"Perdria el producte",v:0},{l:"Tinc el codi, no sabria qu\u00e8 fer",v:1},{l:"Podria desplegar-lo",v:2}]},
+  {id:"backups",q:"Si perdessis totes les dades, les podries recuperar?",opts:[{l:"No",v:0},{l:"No ho s\u00e9",v:0},{l:"S\u00ed, tinc backups",v:2}]},
+  {id:"tool",q:"Amb quina eina l\u2019has constru\u00eft?",sub:"Si n\u2019has usat m\u00e9s d\u2019una, la principal.",opts:[{l:"Lovable",v:"lovable"},{l:"Bolt",v:"bolt"},{l:"v0",v:"v0"},{l:"Replit",v:"replit"},{l:"Cursor / Claude Code",v:"code"},{l:"Altra",v:"other"}]}
+];
+const TN={lovable:"Lovable",bolt:"Bolt",v0:"v0",replit:"Replit",code:"Cursor",other:"la teva eina"};
+const CK=[
+  {y:"Autenticaci\u00f3 d\u2019usuaris",n:"Sense autenticaci\u00f3",f:a=>a.auth>=1},
+  {y:"Permisos i rols",n:"Sense permisos \u2014 tothom veu tot",f:a=>a.auth>=2},
+  {y:"Dades sota el teu control",n:"Dades en un servei que no controles",f:a=>a.data>=2},
+  {y:"Codi versionat",n:"Codi sense repositori",f:a=>a.repo>=1},
+  {y:"Proves d\u2019error fetes",n:"Sense proves de qu\u00e8 passa quan falla",f:a=>a.tests>=1},
+  {y:"Backups de dades",n:"Sense backups \u2014 risc de p\u00e8rdua total",f:a=>a.backups>=2},
+  {y:"Independent de l\u2019eina",n:"Lligat a l\u2019eina de creaci\u00f3",f:a=>a.infra>=2}
+];
+const LV={
+  1:{nm:"Prova",cl:"#e8601c",rg:"3\u201320",
+    hl:"El teu MVP funciona. Necessita que alg\u00fa el vigili.",
+    ds:"Est\u00e0s validant. El producte \u00e9s fr\u00e0gil i sense protecci\u00f3.",
+    ct:"Presa de control en 48h",cd:"Un enginyer agafa el volant: backups, monitoratge, tranquil\u00b7litat.",
+    rk:"Sense backups, un error de base de dades pot fer-te perdre-ho tot. Sense monitoratge, si cau de nit no ho sabr\u00e0s.",
+    now:["Presa de control: enginyer vigilant","Backups autom\u00e0tics","Monitoratge b\u00e0sic","Repositori protegit"],
+    later:["Seguretat","Tests","Gesti\u00f3 d\u2019errors","Entorns separats","Infra de producci\u00f3","CI/CD","Rendiment","GDPR","i18n","WCAG"]},
+  2:{nm:"Tracci\u00f3",cl:"#d4520f",rg:"20\u2013200",
+    hl:"Creix. Cal que creixi segur.",
+    ds:"Tens usuaris reals que depenen del producte.",
+    ct:"Industrialitza els fonaments",cd:"Seguretat, tests, entorns separats. El m\u00ednim per dormir tranquil.",
+    rk:"Amb 50+ usuaris, cada bug \u00e9s tracci\u00f3 perduda. Sense seguretat, qualsevol pot accedir a dades d\u2019altres.",
+    now:["Seguretat b\u00e0sica","Gesti\u00f3 d\u2019errors","Tests cr\u00edtics","Entorns separats","Validaci\u00f3 de dades","Documentaci\u00f3"],
+    later:["Permisos complets","Rendiment","GDPR","Infra com a codi","Autoscaling","i18n","WCAG","Versionat API"]},
+  3:{nm:"Escala",cl:"#a8400b",rg:"200\u20132.000",
+    hl:"Producte real. Cal comportar-se com a tal.",
+    ds:"Tens responsabilitats: dades personals, rendiment, disponibilitat.",
+    ct:"Prepara\u2019t per escalar",cd:"Rendiment, permisos, GDPR, infra com a codi.",
+    rk:"Centenars d\u2019usuaris sense GDPR: exposici\u00f3 legal. Sense rendiment: cada pic de tr\u00e0nsit \u00e9s loteria.",
+    now:["Permisos complets","Rendiment i caching","Auditoria","GDPR","Terraform","Autoscaling","CI/CD complet","Alertes"],
+    later:["i18n","WCAG completa","Versionat API","Pen testing","SLAs"]},
+  4:{nm:"Operaci\u00f3",cl:"#8f3609",rg:"2.000+",
+    hl:"Producte madur. Opera com a plataforma.",
+    ds:"Cr\u00edtic pel negoci. M\u00e0xima robustesa.",
+    ct:"Opera com una plataforma",cd:"i18n, WCAG, pen testing, SLAs.",
+    rk:"A aquesta escala, una hora de caiguda costa milers d\u2019euros.",
+    now:["i18n","WCAG","Versionat API","Pen testing","SLAs","Costos cloud","Concurr\u00e8ncia"],
+    later:[]}
+};
+const SC=["#e8601c","#d4520f","#a8400b","#8f3609"];
+const SN=["Prova","Tracci\u00f3","Escala","Operaci\u00f3"];
+
+let cq=0,ans={};
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function startSurvey(){cq=0;ans={};show('survey');renderQ();}
+
+function renderQ(){
+  const q=QS[cq];
+  // pips
+  let ph='';
+  for(let i=0;i<QS.length;i++){
+    let cls='pip';
+    if(i<cq) cls+=' done';
+    else if(i===cq) cls+=' current';
+    ph+=`<div class="${cls}"></div>`;
+  }
+  document.getElementById('pips').innerHTML=ph;
+  document.getElementById('qTitle').textContent=q.q;
+  const sub=document.getElementById('qSub');
+  if(q.sub){sub.textContent=q.sub;sub.style.display='block';}else sub.style.display='none';
+  const c=document.getElementById('qOpts');
+  c.innerHTML='';
+  c.className='survey-options fade-up';
+  q.opts.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='survey-opt'+(ans[q.id]===o.v?' selected':'');
+    b.textContent=o.l;
+    b.style.animationDelay=`${i*0.04}s`;
+    b.classList.add('fade-up');
+    b.onclick=function(){
+      ans[q.id]=o.v;
+      document.querySelectorAll('.survey-opt').forEach(x=>x.classList.remove('selected'));
+      this.classList.add('selected');
+      setTimeout(()=>{
+        if(cq<QS.length-1){cq++;renderQ();}
+        else showRes();
+      },280);
+    };
+    c.appendChild(b);
+  });
+}
+
+function calcLvl(){
+  let s=0;
+  for(let[k,v]of Object.entries(ans)){if(k==='tool')continue;s+=(typeof v==='number'?v:0);}
+  if(s<=3)return 1;if(s<=7)return 2;if(s<=12)return 3;return 4;
+}
+
+function showRes(){
+  const lv=calcLvl(),d=LV[lv],tool=TN[ans.tool]||"Lovable";
+  const checks=CK.map(c=>({...c,has:c.f(ans)}));
+  const miss=checks.filter(c=>!c.has).length;
+
+  // maturity bar
+  let matH='';
+  for(let n=1;n<=4;n++){
+    let cls=n<lv?'past':n===lv?'here':'future';
+    matH+=`<div style="display:flex;flex-direction:column;align-items:center;flex:${cls==='here'?3:1}">
+      <div class="mat-seg ${cls}" style="background:${SC[n-1]};width:100%">
+        <span class="mat-n">N${n}</span><span class="mat-label">${SN[n-1]}</span>
+      </div>${n===lv?'<div class="mat-pointer">\u25B2 Tu</div>':''}</div>`;
+  }
+
+  let ckH='';
+  checks.forEach(c=>{
+    ckH+=`<div class="check-row">
+      <div class="check-dot ${c.has?'ok':'no'}">${c.has?'\u2713':'\u2717'}</div>
+      <span class="check-label ${c.has?'':'missing'}">${c.has?c.y:c.n}</span>
+    </div>`;
+  });
+
+  let laterH='';
+  if(d.later.length){
+    laterH=`<div class="later-toggle" onclick="toggleLater()">
+      <span>${d.later.length} elements que poden esperar</span>
+      <span class="chevron" id="chev">\u25BE</span>
+    </div>
+    <div class="later-list" id="laterList">
+      ${d.later.map(i=>`<div class="later-item">${i}</div>`).join('')}
+    </div>`;
+  }
+
+  document.getElementById('resContent').innerHTML=`
+    <div class="level-card fade-up">
+      <div class="level-indicator">
+        <span class="level-n" style="color:${d.cl}">N${lv}</span>
+        <span class="level-label">${d.nm} \u00b7 ${d.rg}</span>
+      </div>
+      <h2 class="level-headline">${d.hl}</h2>
+      <p class="level-desc">${d.ds} Constru\u00eft amb ${tool}.</p>
+    </div>
+
+    <div class="maturity-track fade-up fade-up-d1">${matH}</div>
+
+    <div class="checklist fade-up fade-up-d2">
+      <div class="check-header" style="color:${miss?'var(--red)':'var(--green)'}">
+        ${miss?`${miss} de ${checks.length} punts sense cobertura`:`${checks.length} punts coberts`}
+      </div>
+      ${ckH}
+    </div>
+
+    ${miss?`<div class="risk-block fade-up fade-up-d3">
+      <h4>Si no fas res</h4>
+      <p>${d.rk}</p>
+    </div>`:''}
+
+    <div class="cta-primary fade-up fade-up-d3" onclick="window.open('mailto:forge@raona.com?subject=Forge%20${encodeURIComponent(d.nm)}','_blank')">
+      <div><h3>${d.ct}</h3><p>${d.cd}</p></div>
+      <span class="cta-arrow">\u2192</span>
+    </div>
+
+    <div class="action-section fade-up fade-up-d4">
+      <div class="action-title">El que necessites ara</div>
+      ${d.now.map(i=>`<div class="action-item"><div class="action-dot"></div><span class="action-text">${i}</span></div>`).join('')}
+    </div>
+
+    ${laterH}
+
+    <div class="glass-cards fade-up fade-up-d5">
+      <div class="glass-card">
+        <div class="glass-card-tag">Forge Business</div>
+        <div class="glass-card-title">Val la pena invertir-hi?</div>
+        <div class="glass-card-desc">Deck, market fit, competidors, backlog.</div>
+        <span class="glass-card-link">White paper \u2192</span>
+      </div>
+      <div class="glass-card">
+        <div class="glass-card-tag">Forge Build</div>
+        <div class="glass-card-title">Converteix-lo en producte real.</div>
+        <div class="glass-card-desc">Industrialitzaci\u00f3 progressiva.</div>
+        <span class="glass-card-link">White paper \u2192</span>
+      </div>
+    </div>
+
+    <div class="repo-block fade-up fade-up-d5">
+      <h3>Radiografia gratu\u00efta del teu codi</h3>
+      <p>Acc\u00e9s de lectura al repo \u2192 15 min \u2192 mapa d\u2019arquitectura, riscos, backlog t\u00e8cnic.</p>
+      <button class="btn-ghost" onclick="window.open('mailto:forge@raona.com?subject=Repo%20Scan','_blank')">Connecta el repo \u2192</button>
+    </div>
+
+    <div class="r-footer fade-up fade-up-d5">
+      <div><div class="r-footer-brand">raona<em>.com</em></div>
+      <div class="r-footer-sub">20+ anys \u00b7 Coding Corporate Futures</div></div>
+      <button class="btn-again" onclick="restart()">Repetir</button>
+    </div>`;
+  show('results');
+}
+
+function toggleLater(){
+  document.getElementById('laterList').classList.toggle('open');
+  document.getElementById('chev').classList.toggle('open');
+}
+function restart(){cq=0;ans={};show('hero');}
+</script>
+</body>
+</html>
